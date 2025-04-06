@@ -1,0 +1,85 @@
+Sub CopyMultipleDataSetsAndCreateFiles()
+    On Error GoTo ErrorHandler
+
+    Dim selectedFile As Variant
+    Dim sourceWorkbook As Workbook
+    Dim sourceSheet As Worksheet
+    Dim newWorkbook As Workbook
+    Dim newSheet As Worksheet
+    Dim savePath As String
+    Dim targetFolder As String
+    Dim newFileName As String
+    Dim timestamp As String
+    Dim lastRow As Long
+    Dim i As Integer
+    Dim labelValue As String
+    Dim folderDialog As FileDialog
+
+    MsgBox "Please select the Excel file to copy data from.", vbInformation
+
+    selectedFile = Application.GetOpenFilename("Excel Files (*.xls*), *.xls*", , "Select Excel File")
+    If selectedFile = False Then
+        MsgBox "No file was selected.", vbExclamation
+        Exit Sub
+    End If
+
+    ' === Nowy krok: wybór folderu ===
+    Set folderDialog = Application.FileDialog(msoFileDialogFolderPicker)
+    folderDialog.Title = "Select destination folder for new files"
+    If folderDialog.Show <> -1 Then
+        MsgBox "No folder was selected.", vbExclamation
+        Exit Sub
+    End If
+    targetFolder = folderDialog.SelectedItems(1)
+
+    Application.ScreenUpdating = False
+
+    Set sourceWorkbook = Workbooks.Open(selectedFile)
+    Set sourceSheet = sourceWorkbook.Sheets(1)
+
+    lastRow = sourceSheet.Cells(sourceSheet.Rows.Count, "A").End(xlUp).Row
+
+    ' Pętla przez zestawy kolumn: (C&D), (E&F), (G&H), (I&J)
+    For i = 3 To 9 Step 2
+        Set newWorkbook = Workbooks.Add
+        Set newSheet = newWorkbook.Sheets(1)
+
+        labelValue = Trim(sourceSheet.Cells(1, i).Value)
+        If labelValue = "" Then labelValue = "Unnamed"
+
+        ' Kopiowanie kolumn: A, i, i+1 jako wartości
+        newSheet.Range("A1").Resize(lastRow, 1).Value = sourceSheet.Range("A1").Resize(lastRow, 1).Value
+        newSheet.Range("B1").Resize(lastRow, 1).Value = sourceSheet.Cells(1, i).Resize(lastRow, 1).Value
+        newSheet.Range("C1").Resize(lastRow, 1).Value = sourceSheet.Cells(1, i + 1).Resize(lastRow, 1).Value
+
+        timestamp = Format(Now, "yyyy-mm-dd_HH-MM-SS")
+        newFileName = labelValue & "_" & timestamp & ".xlsx"
+        savePath = targetFolder & "\" & newFileName
+
+        Application.DisplayAlerts = False
+        newWorkbook.SaveAs Filename:=savePath, FileFormat:=xlOpenXMLWorkbook
+        Application.DisplayAlerts = True
+
+        newWorkbook.Close SaveChanges:=False
+    Next i
+
+    sourceWorkbook.Close SaveChanges:=False
+
+    MsgBox "All files have been created and saved to:" & vbCrLf & targetFolder, vbInformation
+
+Cleanup:
+    Application.ScreenUpdating = True
+    Exit Sub
+
+ErrorHandler:
+    Application.ScreenUpdating = True
+    Application.DisplayAlerts = True
+
+    On Error Resume Next
+    If Not sourceWorkbook Is Nothing Then sourceWorkbook.Close SaveChanges:=False
+    If Not newWorkbook Is Nothing Then newWorkbook.Close SaveChanges:=False
+    On Error GoTo 0
+
+    MsgBox "An error occurred: " & Err.Description, vbCritical, "Error #" & Err.Number
+    Resume Cleanup
+End Sub
