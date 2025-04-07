@@ -1,0 +1,50 @@
+Sub FiltrowanieDanychWedlugDaty()
+
+    ' === KONFIGURACJA – PODAJ TYLKO NUMERY KOLUMN ===
+    Const kolDataPoczatkowa As Integer = 3 ' kolumna C = 3
+    Const kolDataKoncowa As Integer = 4    ' kolumna D = 4
+    Const kolImieNazwisko As Integer = 7   ' kolumna G = 7
+
+    Dim wsDane As Worksheet
+    Dim wsFiltrowanie As Worksheet
+    Dim dataWybrana As Date
+    Dim ostatniWiersz As Long
+    Dim i As Long
+    Dim wynikWiersz As Long
+
+    Set wsDane = ThisWorkbook.Sheets("Dane")
+    Set wsFiltrowanie = ThisWorkbook.Sheets("Filtrowanie")
+
+    ' Pobierz datę z komórki B2
+    If IsDate(wsFiltrowanie.Range("B2").Value) Then
+        dataWybrana = wsFiltrowanie.Range("B2").Value
+    Else
+        MsgBox "Wprowadź poprawną datę w komórce B2 arkusza 'Filtrowanie'.", vbExclamation
+        Exit Sub
+    End If
+
+    ' Wyczyść poprzednie wyniki od wiersza 5 w dół (kolumny A–C)
+    wsFiltrowanie.Range("A5:C10000").ClearContents
+
+    wynikWiersz = 5 ' Startowy wiersz dla wyników
+
+    ' Znajdź ostatni wiersz z danymi
+    ostatniWiersz = wsDane.Cells(wsDane.Rows.Count, kolDataPoczatkowa).End(xlUp).Row
+
+    ' Przejdź przez dane i filtruj
+    For i = 2 To ostatniWiersz
+        If IsDate(wsDane.Cells(i, kolDataPoczatkowa).Value) And IsDate(wsDane.Cells(i, kolDataKoncowa).Value) Then
+            If dataWybrana >= wsDane.Cells(i, kolDataPoczatkowa).Value And dataWybrana <= wsDane.Cells(i, kolDataKoncowa).Value Then
+                ' Kopiuj dane do arkusza Filtrowanie
+                wsFiltrowanie.Cells(wynikWiersz, 1).Value = wsDane.Cells(i, kolDataPoczatkowa).Value
+                wsFiltrowanie.Cells(wynikWiersz, 2).Value = wsDane.Cells(i, kolDataKoncowa).Value
+                wsFiltrowanie.Cells(wynikWiersz, 3).Value = wsDane.Cells(i, kolImieNazwisko).Value
+                wynikWiersz = wynikWiersz + 1
+            End If
+        End If
+    Next i
+
+    MsgBox "Zakończono filtrowanie. Znaleziono " & wynikWiersz - 5 & " pasujących rekordów.", vbInformation
+
+End Sub
+
